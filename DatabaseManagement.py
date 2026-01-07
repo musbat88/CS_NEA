@@ -1,0 +1,55 @@
+import sqlite3
+
+
+class DatabaseSetup:
+    def __init__(self, db_name='price_tracker.db'):
+        self.db_name = db_name
+
+    # Creates the tables if they dont exist
+    def create_table(self):
+        con = sqlite3.connect(self.db_name)
+        cur = con.cursor()
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS Users(
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+                    )
+        ''')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS Products(
+                    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_url TEXT UNIQUE NOT NULL,
+                    product_name TEXT,
+                    price REAL
+                )
+        ''')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS SavedItems(
+                    user_id INTEGER,
+                    product_id INTEGER,
+                    FOREIGN KEY(user_id) REFERENCES users(user_id),
+                    FOREIGN KEY(product_id) REFERENCES products(product_id)
+                )
+        ''')
+
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ProductSpecs(
+                spec_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                attribute_name TEXT NOT NULL,
+                attribute_value TEXT NOT NULL,
+                FOREIGN KEY(product_id) REFERENCES products(product_id)
+                )
+        ''')
+
+class UserManager:
+    def __init__(self, db_name="price_tracker.db"):
+        self.db_name = db_name
+
+    # Creates a new user and adds them to the database, also hashing their password
+    def create_user(self, username, password):
+        pass
