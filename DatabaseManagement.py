@@ -1,5 +1,5 @@
 import sqlite3
-
+import bcrypt
 
 class DatabaseSetup:
     def __init__(self, db_name='price_tracker.db'):
@@ -52,4 +52,30 @@ class UserManager:
 
     # Creates a new user and adds them to the database, also hashing their password
     def create_user(self, username, password):
-        pass
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+        try:
+            con = sqlite3.connect(self.db_name)
+            cur = con.cursor()
+            cur.execute('INSERT INTO Users (username, password_hash) VALUES (?, ?)', (username, hashed_password))
+            con.commit()
+            return True
+        
+        except sqlite3.IntegrityError:
+            print("Username already exists.")
+            return False
+    
+    # Checks whether the credentials are right or not
+    def verify_user(self, username, password):
+        con = sqlite3.connect(self.db_name)
+        cur = con.cursor()
+        cur.execute('SELECT user_id, password_hash FROM Users WHERE username = ?', (username,))
+        result = cur.fetchone()
+
+        if result:
+            user_id, password_hash = result
+            if bcrypt.checkpw(password.encode('utf-8'), password_hash):
+                return user_id
+        
+        return None
