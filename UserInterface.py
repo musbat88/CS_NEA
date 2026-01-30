@@ -73,7 +73,18 @@ class ResultsPage(BasePage):
         super().__init__(parent, controller)
         self.query = data if data else ""
         
-        tk.Label(self, text=f"Results for: '{self.query}'", font=("Arial", 22), bg='#f0f0f0').pack(pady=10)
+        header_frame = tk.Frame(self, bg='#f0f0f0')
+        header_frame.pack(fill="x", pady=10)
+
+        tk.Label(header_frame, text=f"Results for: '{self.query}'", font=("Arial", 18), bg='#f0f0f0').pack(side="left")
+
+        tk.Label(header_frame, text="Sort by:", bg='#f0f0f0').pack(side="left", padx=(20, 5))
+        self.sort_var = tk.StringVar(value="Relevance")
+        self.sort_menu = ttk.Combobox(header_frame, textvariable=self.sort_var, state="readonly", width=20)
+        self.sort_menu['values'] = ("Relevance", "Price: Low to High", "Price: High to Low")
+        self.sort_menu.pack(side="left")
+        
+        self.sort_menu.bind("<<ComboboxSelected>>", lambda e: self.display_results())
 
         self.canvas = tk.Canvas(self, bg='#f0f0f0', highlightthickness=0)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
@@ -93,15 +104,30 @@ class ResultsPage(BasePage):
         self.display_results()
 
     def display_results(self):
-        results = self.controller.product_manager.update_and_search(self.query)
+        # 1. Map the dropdown text to SQL commands
+        sort_map = {
+            "Relevance": "product_id ASC",
+            "Price: Low to High": "price ASC",
+            "Price: High to Low": "price DESC"
+        }
+        selected_sort = sort_map.get(self.sort_var.get(), "product_id ASC")
+
+        # 2. FIX: Clear the frame BEFORE creating new results
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+
+        # 3. Fetch results from the backend
+        results = self.controller.product_manager.update_and_search(self.query, sort_by=selected_sort)
 
         if not results:
-            tk.Label(self.scrollable_frame, text="No products found in database.", 
+            tk.Label(self.scrollable_frame, text="No products found.", 
                      font=("Arial", 12), bg='#f0f0f0').pack(pady=20)
             return
 
+        # 4. Create the cards
         for product in results:
-            name, website, price, url = product[2], product[3], product[4], product[1]
+            # product = (id, url, name, website, price)
+            p_id, url, name, website, price = product[0], product[1], product[2], product[3], product[4]
 
             card = tk.Frame(self.scrollable_frame, bd=1, relief="solid", bg="white", padx=15, pady=10)
             card.pack(fill="x", pady=5, padx=10)
@@ -113,7 +139,7 @@ class ResultsPage(BasePage):
             button_frame.pack(side="right")
 
             ttk.Button(button_frame, text="Save", 
-                       command=lambda p_id=product[0]: self.save_item(p_id)).pack(side="top", pady=2)
+                       command=lambda p=p_id: self.save_item(p)).pack(side="top", pady=2)
             
             ttk.Button(button_frame, text="View URL", 
                        command=lambda u=url: print(f"Link: {u}")).pack(side="top", pady=2)

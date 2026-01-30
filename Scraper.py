@@ -22,7 +22,7 @@ class Scraper:
         # Formats the name, price and link for the product from the html code
         for i in product_boxes:
             name_tag = i.find('span', class_='description')
-            product_name = name_tag.text.strip() if name_tag else "No name"
+            product_name = name_tag.text.strip()
             price_tag = i.find('span', class_='price')
 
             # Strips the price from random characters, spaces and the pound symbol so that it can be added to the database as the database uses a float to store price
@@ -42,4 +42,30 @@ class Scraper:
                 'url': product_url,
                 'website': 'Scan.co.uk'
             })
+        return products
+    
+    def scrape_amazon(self, query):
+        url = f'https://www.amazon.co.uk/s?k={query.replace(' ', '+')}'
+        response = requests.get(url, headers=self.headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        product_boxes = soup.find_all('div', class_='a-section a-spacing-small a-spacing-top-small')
+        products = []
+        for i in product_boxes:
+            name_tag = i.find('h2')
+            product_name = name_tag.text.strip()
+            price_tag = i.find('span', class_='a-offscreen')
+            if price_tag:
+                raw_price = price_tag.text.replace('£', '').replace(',', '').strip()
+                product_price = float(raw_price)
+            else:
+                product_price = 0.0 
+
+            url_tag = i.find('a', class_='a-link-normal s-line-clamp-2 puis-line-clamp-3-for-col-4-and-8 s-link-style a-text-normal')
+            product_url = "https://www.amazon.co.uk" + url_tag['href']
+            products.append({
+                    'name': product_name,
+                    'price': product_price,
+                    'url': product_url,
+                    'website': 'amazon.co.uk'
+                })
         return products

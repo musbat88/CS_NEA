@@ -88,30 +88,35 @@ class ProductManager:
         self.db_name = db_name
 
     # Updates the database and displays the products that you searched for
-    def update_and_search(self, query):
+    def update_and_search(self, query, sort_by='product_id ASC'):
         scraper = Scraper()
-        results = scraper.scrape_scan(query)
+        scan_results = scraper.scrape_scan(query)
+        amazon_results = scraper.scrape_amazon(query)
+        all_results = scan_results + amazon_results
 
-        for i in results:
+        for i in all_results:
             self.add_product(i['url'], i['name'], i['website'], i['price'])
-        return self.search_products(query)
+        return self.search_products(query, sort_by)
 
     # Adds a product to the database along with its relevant info
     def add_product(self, product_url, product_name, product_website, price):
         with sqlite3.connect(self.db_name) as con:
             cur = con.cursor()
             cur.execute('''
-                INSERT OR REPLACE INTO Products (product_url, product_name, product_website, price)
+                INSERT INTO Products (product_url, product_name, product_website, price)
                 VALUES (?, ?, ?, ?)
+                ON CONFLICT(product_url) DO UPDATE SET
+                    price = excluded.price,
+                    product_name = excluded.product_name
             ''', (product_url, product_name, product_website, price))
             con.commit()
             return cur.lastrowid
     
     # Searches for a product in the Products table
-    def search_products(self, search):
+    def search_products(self, query, sort_by='product_id ASC'):
         with sqlite3.connect(self.db_name) as con:
             cur = con.cursor()
-            cur.execute('SELECT * FROM Products WHERE product_name LIKE ?', (f'%{search}%',))
+            cur.execute(f'SELECT * FROM Products WHERE product_name LIKE ? ORDER BY {sort_by}', (f'%{query}%',))
             return cur.fetchall()
         
     # Saves a product into the Products table
