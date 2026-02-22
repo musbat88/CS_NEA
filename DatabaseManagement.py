@@ -1,6 +1,6 @@
 import sqlite3
 import bcrypt
-from Scraper import Scraper
+from Scraper import ScanScraper, AmazonScraper, EbuyerScraper 
 
 class DatabaseSetup:
     def __init__(self, db_name='price_tracker.db'):
@@ -89,13 +89,17 @@ class ProductManager:
 
     # Updates the database and displays the products that you searched for
     def update_and_search(self, query, sort_by='product_id ASC'):
-        scraper = Scraper()
-        scan_results = scraper.scrape_scan(query)
-        amazon_results = scraper.scrape_amazon(query)
-        all_results = scan_results + amazon_results
+        scraper = [ScanScraper(), AmazonScraper(), EbuyerScraper()]
+        results = []
+        for i in scraper:
+            try:
+                results.extend(i.scrape(query))
+            except:
+                print("Scraper failed for some reason")
 
-        for i in all_results:
+        for i in results:
             self.add_product(i['url'], i['name'], i['website'], i['price'])
+        
         return self.search_products(query, sort_by)
 
     # Adds a product to the database along with its relevant info
