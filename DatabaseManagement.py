@@ -55,6 +55,12 @@ class UserManager:
 
     # Creates a new user and adds them to the database, also hashing their password
     def create_user(self, username, password):
+        if len(password) < 8:
+            return "Password must be at least 8 characters long."
+
+        if not any(char.isdigit() for char in password):
+            return "Password must contain at least one number."
+        
         # Hashes the password using bcrypt
         hash = password.encode('utf-8')
         salt = bcrypt.gensalt()
@@ -176,3 +182,4 @@ class ProductManager:
             ''', (user_id, product_id))
             con.commit()
             return True
+        

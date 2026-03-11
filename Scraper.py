@@ -24,7 +24,6 @@ class ScanScraper(Scraper):
         # Finds the <li> tags in the html with the class product, this takes the box each item is stored in
         product_boxes = soup.find_all('li', class_='product')
         products = []
-
         # Formats the name, price and link for the product from the html code
         for i in product_boxes[:5]:
             name_tag = i.find('span', class_='description')
@@ -90,7 +89,7 @@ class EbuyerScraper(Scraper):
             product_price = float(raw_price)
             url = i.get('li-url')
 
-            
+
             products.append({
                 'name': product_name,
                 'price': product_price,

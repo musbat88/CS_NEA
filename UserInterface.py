@@ -5,7 +5,6 @@ class BasePage(tk.Frame):
     """ A generic page that all other pages inherit from. """
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        # controller is essentially the UI manager
         self.controller = controller
         self.configure(bg='#f0f0f0', padx=20, pady=20)
 
@@ -49,12 +48,16 @@ class LoginPage(BasePage):
             messagebox.showwarning("Input Error", "Please enter both a username and password.")
             return
 
-        success = self.controller.auth_manager.create_user(username, password)
+        result = self.controller.auth_manager.create_user(username, password)
         
-        if success:
+        if result is True:
             messagebox.showinfo("Registration Success", "Account created! You can now log in.")
+            self.username_entry.delete(0, tk.END)
+            self.password_entry.delete(0, tk.END)
+        elif result is False:
+            messagebox.showerror("Error", "Username already exists. Please choose another.")
         else:
-            messagebox.showerror("Error", "Username already exists.")
+            messagebox.showwarning("Requirements Not Met", result)
 
 class SearchPage(BasePage):
     def __init__(self, parent, controller, data=None):
@@ -103,8 +106,12 @@ class ResultsPage(BasePage):
 
         self.display_results()
 
+    def copy_to_clipboard(self, url):
+        self.clipboard_clear()
+        self.clipboard_append(url)
+        self.update()  
+
     def display_results(self):
-        # 1. Map the dropdown text to SQL commands
         sort_map = {
             "Relevance": "product_id ASC",
             "Price: Low to High": "price ASC",
@@ -112,11 +119,9 @@ class ResultsPage(BasePage):
         }
         selected_sort = sort_map.get(self.sort_var.get(), "product_id ASC")
 
-        # 2. FIX: Clear the frame BEFORE creating new results
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        # 3. Fetch results from the backend
         results = self.controller.product_manager.update_and_search(self.query, sort_by=selected_sort)
 
         if not results:
@@ -124,9 +129,7 @@ class ResultsPage(BasePage):
                      font=("Arial", 12), bg='#f0f0f0').pack(pady=20)
             return
 
-        # 4. Create the cards
         for product in results:
-            # product = (id, url, name, website, price)
             p_id, url, name, website, price = product[0], product[1], product[2], product[3], product[4]
 
             card = tk.Frame(self.scrollable_frame, bd=1, relief="solid", bg="white", padx=15, pady=10)
@@ -139,10 +142,10 @@ class ResultsPage(BasePage):
             button_frame.pack(side="right")
 
             ttk.Button(button_frame, text="Save", 
-                       command=lambda p=p_id: self.save_item(p)).pack(side="top", pady=2)
+                    command=lambda p=p_id: self.save_item(p)).pack(side="top", pady=2)
             
-            ttk.Button(button_frame, text="View URL", 
-                       command=lambda u=url: print(f"Link: {u}")).pack(side="top", pady=2)
+            ttk.Button(button_frame, text="Copy URL", 
+                    command=lambda u=url: self.copy_to_clipboard(u)).pack(side="top", pady=2)
             
     def save_item(self, product_id):
         user_id = self.controller.current_user_id
@@ -165,6 +168,11 @@ class DashboardPage(BasePage):
         self.list_frame.pack(fill="both", expand=True)
         
         self.load_dashboard()
+
+    def copy_to_clipboard(self, url):
+        self.clipboard_clear()
+        self.clipboard_append(url)
+        self.update()  
 
     def load_dashboard(self):
         for widget in self.list_frame.winfo_children():
@@ -189,10 +197,10 @@ class DashboardPage(BasePage):
                 btn_frame.pack(side="right")
 
                 ttk.Button(btn_frame, text="Remove", 
-                           command=lambda id=p_id: self.handle_remove(id)).pack(side="right", padx=2)
+                        command=lambda id=p_id: self.handle_remove(id)).pack(side="right", padx=2)
                 
-                ttk.Button(btn_frame, text="Link", 
-                           command=lambda u=url: print(f"Opening: {u}")).pack(side="right", padx=2)
+                ttk.Button(btn_frame, text="Copy URL", 
+                        command=lambda u=url: self.copy_to_clipboard(u)).pack(side="top", pady=2)
         
     def handle_remove(self, product_id):
         user_id = self.controller.current_user_id
